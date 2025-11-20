@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer as LeafletMap, TileLayer, Polygon, GeoJSON, useMap, Popup } from 'react-leaflet';
-import { cellToBoundary } from 'h3-js';
+import { cellToBoundary, getResolution } from 'h3-js';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default marker icon in Leaflet with Webpack/Vite
+// ... (icon fix code remains same)
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -35,6 +35,8 @@ function MapUpdater({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
 }
 
 export function MapContainer({ zipBoundary, hexes }: MapContainerProps) {
+    const [selectedHex, setSelectedHex] = useState<string | null>(null);
+
     // Calculate bounds if zipBoundary exists
     let bounds: L.LatLngBoundsExpression | null = null;
 
@@ -77,23 +79,42 @@ export function MapContainer({ zipBoundary, hexes }: MapContainerProps) {
 
                 {hexes.map((hex) => {
                     const boundary = cellToBoundary(hex);
+                    const isSelected = selectedHex === hex;
+                    const resolution = getResolution(hex);
+
                     return (
                         <Polygon
                             key={hex}
                             positions={boundary}
                             pathOptions={{
-                                color: '#10b981', // emerald-500
-                                weight: 1,
-                                fillOpacity: 0.4,
-                                fillColor: '#10b981'
+                                color: isSelected ? '#f59e0b' : '#10b981', // amber-500 : emerald-500
+                                weight: isSelected ? 2 : 1,
+                                fillOpacity: isSelected ? 0.6 : 0.4,
+                                fillColor: isSelected ? '#f59e0b' : '#10b981'
+                            }}
+                            eventHandlers={{
+                                click: () => setSelectedHex(hex)
                             }}
                         >
                             <Popup className="custom-popup">
-                                <div className="text-center">
-                                    <p className="text-xs font-bold text-slate-500 mb-1">H3 Index</p>
-                                    <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded text-slate-800 select-all">
-                                        {hex}
-                                    </code>
+                                <div className="min-w-[150px]">
+                                    <div className="bg-slate-100 border-b border-slate-200 px-3 py-2 rounded-t-md">
+                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">H3 Hexagon</h3>
+                                    </div>
+                                    <div className="p-3 space-y-2">
+                                        <div>
+                                            <p className="text-[10px] font-medium text-slate-400 uppercase">Index</p>
+                                            <code className="text-sm font-mono text-slate-800 select-all block bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                                {hex}
+                                            </code>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-medium text-slate-400 uppercase">Resolution</p>
+                                            <p className="text-sm font-medium text-slate-700">
+                                                Level {resolution}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </Popup>
                         </Polygon>
