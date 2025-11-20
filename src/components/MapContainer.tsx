@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { MapContainer as LeafletMap, TileLayer, Polygon, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer as LeafletMap, TileLayer, Polygon, GeoJSON, useMap, Popup } from 'react-leaflet';
 import { cellToBoundary } from 'h3-js';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -87,7 +87,16 @@ export function MapContainer({ zipBoundary, hexes }: MapContainerProps) {
                                 fillOpacity: 0.4,
                                 fillColor: '#10b981'
                             }}
-                        />
+                        >
+                            <Popup className="custom-popup">
+                                <div className="text-center">
+                                    <p className="text-xs font-bold text-slate-500 mb-1">H3 Index</p>
+                                    <code className="text-sm font-mono bg-slate-100 px-2 py-1 rounded text-slate-800 select-all">
+                                        {hex}
+                                    </code>
+                                </div>
+                            </Popup>
+                        </Polygon>
                     );
                 })}
             </LeafletMap>
