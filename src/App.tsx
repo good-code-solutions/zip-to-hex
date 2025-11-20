@@ -10,6 +10,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [zipBoundary, setZipBoundary] = useState<GeoResponse | null>(null);
   const [hexes, setHexes] = useState<string[]>([]);
+  const [opacity, setOpacity] = useState(0.4);
 
   const handleSearch = async (zip: string, resolution: number) => {
     setIsLoading(true);
@@ -62,12 +63,14 @@ function App() {
 
   return (
     <div className="w-full h-screen overflow-hidden bg-slate-950">
-      <MapContainer zipBoundary={zipBoundary} hexes={hexes} />
+      <MapContainer zipBoundary={zipBoundary} hexes={hexes} opacity={opacity} />
       <ControlPanel
         onSearch={handleSearch}
         isLoading={isLoading}
         error={error}
         stats={hexes.length > 0 ? { hexCount: hexes.length, hexes } : null}
+        opacity={opacity}
+        onOpacityChange={setOpacity}
       />
       <ContactModal />
     </div>

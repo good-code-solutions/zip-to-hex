@@ -11,9 +11,11 @@ interface ControlPanelProps {
         hexCount: number;
         hexes: string[];
     } | null;
+    opacity: number;
+    onOpacityChange: (opacity: number) => void;
 }
 
-export function ControlPanel({ onSearch, isLoading, error, stats }: ControlPanelProps) {
+export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpacityChange }: ControlPanelProps) {
     const [zip, setZip] = useState('');
     const [resolution, setResolution] = useState(7);
     const [isExpanded, setIsExpanded] = useState(true);
@@ -104,6 +106,27 @@ export function ControlPanel({ onSearch, isLoading, error, stats }: ControlPanel
                                         <div className="flex justify-between text-[10px] font-medium text-slate-500 uppercase tracking-wide">
                                             <span>Coarse (5)</span>
                                             <span>Fine (10)</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-1 pb-2 space-y-3 border-t border-white/5">
+                                        <div className="flex justify-between items-end">
+                                            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">Hex Opacity</label>
+                                            <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+                                                {Math.round(opacity * 100)}%
+                                            </span>
+                                        </div>
+
+                                        <div className="relative h-6 flex items-center">
+                                            <input
+                                                type="range"
+                                                min="0.1"
+                                                max="1.0"
+                                                step="0.1"
+                                                value={opacity}
+                                                onChange={(e) => onOpacityChange(Number(e.target.value))}
+                                                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
+                                            />
                                         </div>
                                     </div>
                                 </motion.div>

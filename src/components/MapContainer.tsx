@@ -20,6 +20,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface MapContainerProps {
     zipBoundary: any | null;
     hexes: string[];
+    opacity: number;
 }
 
 function MapUpdater({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
@@ -34,7 +35,7 @@ function MapUpdater({ bounds }: { bounds: L.LatLngBoundsExpression | null }) {
     return null;
 }
 
-export function MapContainer({ zipBoundary, hexes }: MapContainerProps) {
+export function MapContainer({ zipBoundary, hexes, opacity }: MapContainerProps) {
     const [selectedHex, setSelectedHex] = useState<string | null>(null);
 
     // Calculate bounds if zipBoundary exists
@@ -89,7 +90,7 @@ export function MapContainer({ zipBoundary, hexes }: MapContainerProps) {
                             pathOptions={{
                                 color: isSelected ? '#f59e0b' : '#10b981', // amber-500 : emerald-500
                                 weight: isSelected ? 2 : 1,
-                                fillOpacity: isSelected ? 0.6 : 0.4,
+                                fillOpacity: isSelected ? 0.6 : opacity,
                                 fillColor: isSelected ? '#f59e0b' : '#10b981'
                             }}
                             eventHandlers={{
