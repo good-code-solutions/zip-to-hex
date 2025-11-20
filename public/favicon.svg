@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M50 5 L93.3 30 V80 L50 105 L6.7 80 V30 Z" fill="#10b981" stroke="#059669" stroke-width="5" transform="translate(0 -5) scale(0.95)" />
+  <path d="M50 25 L75 40 V70 L50 85 L25 70 V40 Z" fill="#34d399" fill-opacity="0.5" />
+</svg>
