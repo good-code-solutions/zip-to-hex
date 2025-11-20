@@ -97,24 +97,14 @@ export function MapContainer({ zipBoundary, hexes }: MapContainerProps) {
                             }}
                         >
                             <Popup className="custom-popup">
-                                <div className="min-w-[150px]">
-                                    <div className="bg-slate-100 border-b border-slate-200 px-3 py-2 rounded-t-md">
-                                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">H3 Hexagon</h3>
+                                <div className="flex flex-col gap-1 min-w-[120px]">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Index</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Res {resolution}</span>
                                     </div>
-                                    <div className="p-3 space-y-2">
-                                        <div>
-                                            <p className="text-[10px] font-medium text-slate-400 uppercase">Index</p>
-                                            <code className="text-sm font-mono text-slate-800 select-all block bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                                                {hex}
-                                            </code>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-medium text-slate-400 uppercase">Resolution</p>
-                                            <p className="text-sm font-medium text-slate-700">
-                                                Level {resolution}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <code className="text-sm font-mono text-slate-800 select-all bg-slate-50 px-2 py-1 rounded border border-slate-100 text-center">
+                                        {hex}
+                                    </code>
                                 </div>
                             </Popup>
                         </Polygon>
