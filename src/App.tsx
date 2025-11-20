@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MapContainer } from './components/MapContainer';
 import { ControlPanel } from './components/ControlPanel';
+import { ContactModal } from './components/ContactModal';
 import { getZipBoundary, type GeoResponse } from './lib/geo';
 import { getHexesForPolygon, getHexesForMultiPolygon, getHexForPoint } from './lib/h3-helper';
 
@@ -68,6 +69,7 @@ function App() {
         error={error}
         stats={hexes.length > 0 ? { hexCount: hexes.length, hexes } : null}
       />
+      <ContactModal />
     </div>
   );
 }
