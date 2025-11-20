@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer } from './components/MapContainer';
 import { ControlPanel } from './components/ControlPanel';
 import { ContactModal } from './components/ContactModal';
@@ -11,6 +11,32 @@ function App() {
   const [zipBoundary, setZipBoundary] = useState<GeoResponse | null>(null);
   const [hexes, setHexes] = useState<string[]>([]);
   const [opacity, setOpacity] = useState(0.4);
+  const [initialState, setInitialState] = useState<{ zip: string; resolution: number } | null>(null);
+
+  // Load state from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('zip2h3_state');
+    if (saved) {
+      try {
+        const { zipBoundary, hexes, opacity, zip, resolution } = JSON.parse(saved);
+        if (zipBoundary) setZipBoundary(zipBoundary);
+        if (hexes) setHexes(hexes);
+        if (opacity) setOpacity(opacity);
+        if (zip && resolution) setInitialState({ zip, resolution });
+      } catch (e) {
+        console.error("Failed to load saved state", e);
+      }
+    }
+  }, []);
+
+  // Save opacity when it changes
+  useEffect(() => {
+    const saved = localStorage.getItem('zip2h3_state');
+    if (saved) {
+      const state = JSON.parse(saved);
+      localStorage.setItem('zip2h3_state', JSON.stringify({ ...state, opacity }));
+    }
+  }, [opacity]);
 
   const handleSearch = async (zip: string, resolution: number) => {
     setIsLoading(true);
@@ -49,6 +75,15 @@ function App() {
 
       setHexes(generatedHexes);
 
+      // Save state
+      localStorage.setItem('zip2h3_state', JSON.stringify({
+        zipBoundary: data,
+        hexes: generatedHexes,
+        opacity,
+        zip,
+        resolution
+      }));
+
       if (generatedHexes.length === 0) {
         setError("No hexes generated. Try a higher resolution or check the zip code area.");
       }
@@ -71,6 +106,7 @@ function App() {
         stats={hexes.length > 0 ? { hexCount: hexes.length, hexes } : null}
         opacity={opacity}
         onOpacityChange={setOpacity}
+        initialState={initialState}
       />
       <ContactModal />
     </div>

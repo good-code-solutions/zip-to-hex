@@ -33,18 +33,22 @@ export function ContactModal() {
 
     return (
         <>
-            {/* Floating Action Button */}
-            <motion.button
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-50 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-500 transition-colors"
-                aria-label="Contact Support"
-            >
-                <MessageSquare className="w-6 h-6" />
-            </motion.button>
+            <AnimatePresence>
+                {!isOpen && (
+                    <motion.button
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setIsOpen(true)}
+                        className="fixed bottom-24 right-6 z-[900] md:bottom-6 bg-emerald-500 hover:bg-emerald-400 text-white p-3 md:px-4 md:py-3 rounded-full md:rounded-xl shadow-lg shadow-emerald-900/20 flex items-center gap-2 transition-colors group"
+                    >
+                        <MessageSquare className="w-6 h-6 md:w-5 md:h-5" />
+                        <span className="hidden md:inline font-semibold">Contact Us</span>
+                    </motion.button>
+                )}
+            </AnimatePresence>
 
             {/* Modal */}
             <AnimatePresence>

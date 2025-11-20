@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Loader2, Hexagon, Map, Settings2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
@@ -13,13 +13,22 @@ interface ControlPanelProps {
     } | null;
     opacity: number;
     onOpacityChange: (opacity: number) => void;
+    initialState: { zip: string; resolution: number } | null;
 }
 
-export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpacityChange }: ControlPanelProps) {
-    const [zip, setZip] = useState('');
-    const [resolution, setResolution] = useState(7);
+export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpacityChange, initialState }: ControlPanelProps) {
+    const [zip, setZip] = useState(initialState?.zip || '');
+    const [resolution, setResolution] = useState(initialState?.resolution || 7);
     const [isSettingsOpen, setIsSettingsOpen] = useState(true);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+    // Update state if initialState changes (e.g. loaded from storage after mount)
+    useEffect(() => {
+        if (initialState) {
+            setZip(initialState.zip);
+            setResolution(initialState.resolution);
+        }
+    }, [initialState]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,15 +78,27 @@ export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpa
                                 <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Spatial Indexer</p>
                             </div>
                         </div>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsSettingsOpen(!isSettingsOpen);
-                            }}
-                            className={`text-slate-400 hover:text-white transition-colors ${!isMobileOpen && 'md:block hidden'}`}
-                        >
-                            <Settings2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMobileOpen(true);
+                                }}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-colors ${!isMobileOpen && 'md:hidden'}`}
+                            >
+                                <Search className="w-3.5 h-3.5" />
+                                <span>Search</span>
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsSettingsOpen(!isSettingsOpen);
+                                }}
+                                className={`text-slate-400 hover:text-white transition-colors ${!isMobileOpen && 'md:block hidden'}`}
+                            >
+                                <Settings2 className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Content - Hidden on mobile unless open */}
