@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 interface ControlPanelProps {
     onSearch: (query: string, resolution: number, type: 'zip' | 'address') => void;
     onDrawMode: () => void;
-    onReset: () => void;
+    onReset: (targetMode?: 'zip' | 'address' | 'draw') => void;
     isLoading: boolean;
     error: string | null;
     stats: {
@@ -150,7 +150,7 @@ export function ControlPanel({
                                     setMode('zip');
                                     if (wasDrawMode) {
                                         // Clear draw mode state when switching from draw
-                                        onReset();
+                                        onReset('zip');
                                     }
                                 }}
                                 className={cn(
@@ -166,7 +166,7 @@ export function ControlPanel({
                                     setMode('address');
                                     if (wasDrawMode) {
                                         // Clear draw mode state when switching from draw
-                                        onReset();
+                                        onReset('address');
                                     }
                                 }}
                                 className={cn(

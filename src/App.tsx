@@ -163,13 +163,13 @@ function App() {
     setShowWelcome(false);
   };
 
-  const handleReset = () => {
+  const handleReset = (targetMode: 'zip' | 'address' | 'draw' = 'zip') => {
     setZipBoundary(null);
     setHexes([]);
     setDrawnPolygon(null);
     setZipQuery('');
     setAddressQuery('');
-    setSearchMode('zip');
+    setSearchMode(targetMode);
     setIsDrawMode(false);
     setError(null);
     localStorage.removeItem('zip2h3_state');
