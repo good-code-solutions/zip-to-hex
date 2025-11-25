@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { X, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { X, Send, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export function ContactModal() {
-    const [isOpen, setIsOpen] = useState(false);
+interface ContactModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export function ContactModal({ isOpen, onClose }: ContactModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
@@ -22,7 +26,7 @@ export function ContactModal() {
             setSubmitted(true);
             setTimeout(() => {
                 setSubmitted(false);
-                setIsOpen(false);
+                onClose();
             }, 3000);
         } catch (error) {
             console.error('Form submission error:', error);
@@ -33,23 +37,6 @@ export function ContactModal() {
 
     return (
         <>
-            <AnimatePresence>
-                {!isOpen && (
-                    <motion.button
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setIsOpen(true)}
-                        className="fixed bottom-24 right-6 z-[900] md:bottom-6 bg-emerald-500 hover:bg-emerald-400 text-white p-3 md:px-4 md:py-3 rounded-full md:rounded-xl shadow-lg shadow-emerald-900/20 flex items-center gap-2 transition-colors group"
-                    >
-                        <MessageSquare className="w-6 h-6 md:w-5 md:h-5" />
-                        <span className="hidden md:inline font-semibold">Contact Us</span>
-                    </motion.button>
-                )}
-            </AnimatePresence>
-
             {/* Modal */}
             <AnimatePresence>
                 {isOpen && (
@@ -64,7 +51,7 @@ export function ContactModal() {
                             <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900/50">
                                 <h2 className="text-xl font-semibold text-white">Contact Us</h2>
                                 <button
-                                    onClick={() => setIsOpen(false)}
+                                    onClick={onClose}
                                     className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
                                 >
                                     <X className="w-5 h-5" />

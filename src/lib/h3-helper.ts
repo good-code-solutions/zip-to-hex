@@ -68,8 +68,12 @@ export function getHexBoundary(hexIndex: string): number[][] {
     return boundary;
 }
 
-export function getHexForPoint(lat: number, lng: number, resolution: number): string[] {
+export function getHexForPoint(lat: number, lng: number, resolution: number, singleHex: boolean = false): string[] {
     try {
+        if (singleHex) {
+            return [h3.latLngToCell(lat, lng, resolution)];
+        }
+
         // Instead of just returning the center hex (which shrinks with resolution),
         // let's approximate the zip code area as a circle of fixed radius (e.g., 3km)
         // and fill it with hexes. This way, higher resolution = more hexes.
@@ -99,5 +103,17 @@ export function getHexForPoint(lat: number, lng: number, resolution: number): st
         } catch (e2) {
             return [];
         }
+    }
+}
+
+export function getHexesForLatLongLoop(loop: number[][], resolution: number): string[] {
+    try {
+        // loop is [lat, lng][]
+        // h3.polygonToCells(loop, res, isGeoJson=false) expects [lat, lng]
+        const hexes = h3.polygonToCells(loop, resolution);
+        return hexes;
+    } catch (e) {
+        console.error("Error generating hexes from loop:", e);
+        return [];
     }
 }

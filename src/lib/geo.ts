@@ -107,3 +107,31 @@ export async function getZipBoundary(zipCode: string): Promise<GeoResponse | nul
         return null;
     }
 }
+
+export async function getAddressLocation(address: string): Promise<GeoResponse | null> {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=geojson&limit=1`,
+      {
+        headers: {
+          'User-Agent': 'ZipToHexConverter/1.0'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+    
+    if (data.features && data.features.length > 0) {
+      return data as GeoResponse;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching address:', error);
+    return null;
+  }
+}

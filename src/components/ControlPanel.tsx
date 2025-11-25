@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, Hexagon, Map, Settings2 } from 'lucide-react';
+import { Search, Loader2, Hexagon, Map, Settings2, MapPin, PenTool, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 
 interface ControlPanelProps {
-    onSearch: (zip: string, resolution: number) => void;
+    onSearch: (query: string, resolution: number, type: 'zip' | 'address') => void;
+    onDrawMode: () => void;
+    onReset: () => void;
     isLoading: boolean;
     error: string | null;
     stats: {
@@ -13,33 +15,77 @@ interface ControlPanelProps {
     } | null;
     opacity: number;
     onOpacityChange: (opacity: number) => void;
-    initialState: { zip: string; resolution: number } | null;
+    zipQuery: string;
+    addressQuery: string;
+    initialResolution: number;
+    initialMode: 'zip' | 'address' | 'draw';
 }
 
-export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpacityChange, initialState }: ControlPanelProps) {
-    const [zip, setZip] = useState(initialState?.zip || '');
-    const [resolution, setResolution] = useState(initialState?.resolution || 7);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(true);
-    const [isMobileOpen, setIsMobileOpen] = useState(false);
+type SearchMode = 'zip' | 'address' | 'draw';
 
-    // Update state if initialState changes (e.g. loaded from storage after mount)
+export function ControlPanel({
+    onSearch,
+    onDrawMode,
+    onReset,
+    isLoading,
+    error,
+    stats,
+    opacity,
+    onOpacityChange,
+    zipQuery,
+    addressQuery,
+    initialResolution,
+    initialMode
+}: ControlPanelProps) {
+    const [zipInput, setZipInput] = useState(zipQuery);
+    const [addressInput, setAddressInput] = useState(addressQuery);
+    const [resolution, setResolution] = useState(initialResolution);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(true);
+    const [isMobileOpen, setIsMobileOpen] = useState(true);
+    const [mode, setMode] = useState<SearchMode>(initialMode);
+
+    // Update state if props change (e.g. from localStorage load)
     useEffect(() => {
-        if (initialState) {
-            setZip(initialState.zip);
-            setResolution(initialState.resolution);
-        }
-    }, [initialState]);
+        setZipInput(zipQuery);
+    }, [zipQuery]);
+
+    useEffect(() => {
+        setAddressInput(addressQuery);
+    }, [addressQuery]);
+
+    useEffect(() => {
+        setResolution(initialResolution);
+    }, [initialResolution]);
+
+    useEffect(() => {
+        setMode(initialMode);
+    }, [initialMode]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (zip.length >= 5) {
-            onSearch(zip, resolution);
-            // On mobile, collapse after search to show map
-            if (window.innerWidth < 768) {
-                setIsMobileOpen(false);
-            }
+        if (mode === 'draw') {
+            onDrawMode();
+            if (window.innerWidth < 768) setIsMobileOpen(false);
+            return;
+        }
+
+        const currentQuery = mode === 'zip' ? zipInput : addressInput;
+
+        if (currentQuery.length >= 3) {
+            onSearch(currentQuery, resolution, mode);
+            if (window.innerWidth < 768) setIsMobileOpen(false);
         }
     };
+
+    const opacityLevels = [
+        { label: 'None', value: 0 },
+        { label: 'Low', value: 0.2 },
+        { label: 'Med', value: 0.5 },
+        { label: 'High', value: 0.8 },
+    ];
+
+    const currentInput = mode === 'zip' ? zipInput : addressInput;
+    const isInputValid = currentInput.length >= 3;
 
     return (
         <motion.div
@@ -61,7 +107,7 @@ export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpa
                 </div>
 
                 <div className="p-5 pt-2 md:pt-5">
-                    {/* Header - Always visible, clickable on mobile to toggle */}
+                    {/* Header */}
                     <div
                         className="flex items-center justify-between mb-6 cursor-pointer md:cursor-default"
                         onClick={() => setIsMobileOpen(!isMobileOpen)}
@@ -72,23 +118,16 @@ export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpa
                                 <Hexagon className="relative text-emerald-400 w-7 h-7" strokeWidth={2.5} />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold font-['Outfit'] tracking-tight text-white">
-                                    Zip<span className="text-emerald-400">2</span>H3
-                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-xl font-bold font-['Outfit'] tracking-tight text-white flex items-center gap-2">
+                                        Zip<span className="text-emerald-400">2</span>H3
+                                        {isLoading && <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />}
+                                    </h1>
+                                </div>
                                 <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">Spatial Indexer</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsMobileOpen(true);
-                                }}
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-colors ${!isMobileOpen && 'md:hidden'}`}
-                            >
-                                <Search className="w-3.5 h-3.5" />
-                                <span>Search</span>
-                            </button>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -101,24 +140,75 @@ export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpa
                         </div>
                     </div>
 
-                    {/* Content - Hidden on mobile unless open */}
-                    <div className={`${isMobileOpen ? 'block' : 'hidden'} md:block`}>
+                    {/* Content */}
+                    <div className={`${isMobileOpen ? 'block' : 'hidden'} md: block`}>
+                        {/* Mode Tabs */}
+                        <div className="flex p-1 bg-slate-800/50 rounded-xl mb-4 border border-white/5">
+                            <button
+                                onClick={() => {
+                                    const wasDrawMode = mode === 'draw';
+                                    setMode('zip');
+                                    if (wasDrawMode) {
+                                        // Clear draw mode state when switching from draw
+                                        onReset();
+                                    }
+                                }}
+                                className={cn(
+                                    "flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5",
+                                    mode === 'zip' ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                                )}
+                            >
+                                <Hash className="w-3 h-3" /> Zip
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const wasDrawMode = mode === 'draw';
+                                    setMode('address');
+                                    if (wasDrawMode) {
+                                        // Clear draw mode state when switching from draw
+                                        onReset();
+                                    }
+                                }}
+                                className={cn(
+                                    "flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5",
+                                    mode === 'address' ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                                )}
+                            >
+                                <MapPin className="w-3 h-3" /> Address
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setMode('draw');
+                                    onDrawMode();
+                                }}
+                                className={cn(
+                                    "flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5",
+                                    mode === 'draw' ? "bg-emerald-500 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                                )}
+                            >
+                                <PenTool className="w-3 h-3" /> Draw
+                            </button>
+                        </div>
+
                         <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">Target Location</label>
-                                <div className="relative group">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
-                                    <input
-                                        type="text"
-                                        value={zip}
-                                        onChange={(e) => setZip(e.target.value)}
-                                        placeholder="Enter US Zip Code..."
-                                        className="relative w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50 focus:bg-slate-800/80 transition-all"
-                                        maxLength={5}
-                                    />
-                                    <Search className="absolute left-3.5 top-3 w-5 h-5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
+                            {mode !== 'draw' && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">
+                                        {mode === 'zip' ? 'Zip Code' : 'Address'}
+                                    </label>
+                                    <div className="relative group">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-500" />
+                                        <input
+                                            type="text"
+                                            value={mode === 'zip' ? zipInput : addressInput}
+                                            onChange={(e) => mode === 'zip' ? setZipInput(e.target.value) : setAddressInput(e.target.value)}
+                                            placeholder={mode === 'zip' ? "Enter Zip Code..." : "Enter full address..."}
+                                            className="relative w-full bg-slate-800/50 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-base md:text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50 focus:bg-slate-800/80 transition-all"
+                                        />
+                                        <Search className="absolute left-3.5 top-3 w-5 h-5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             <AnimatePresence>
                                 {isSettingsOpen && (
@@ -136,65 +226,71 @@ export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpa
                                                 </span>
                                             </div>
 
-                                            <div className="relative h-6 flex items-center">
+                                            <div className="relative pt-6 pb-2">
                                                 <input
                                                     type="range"
                                                     min="5"
                                                     max="10"
                                                     value={resolution}
                                                     onChange={(e) => setResolution(Number(e.target.value))}
-                                                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
+                                                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all relative z-10"
                                                 />
-                                            </div>
-                                            <div className="flex justify-between text-[10px] font-medium text-slate-500 uppercase tracking-wide">
-                                                <span>Coarse (5)</span>
-                                                <span>Fine (10)</span>
+                                                <div className="absolute top-0 left-0 right-0 flex justify-between px-1">
+                                                    {[5, 7, 8, 10].map((val) => (
+                                                        <div key={val} className="flex flex-col items-center gap-1">
+                                                            <span className="text-[9px] text-slate-500 font-mono">{val}</span>
+                                                            <div className="w-px h-1 bg-slate-700" />
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 
                                         <div className="pt-1 pb-2 space-y-3 border-t border-white/5">
-                                            <div className="flex justify-between items-end">
-                                                <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">Hex Opacity</label>
-                                                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
-                                                    {Math.round(opacity * 100)}%
-                                                </span>
-                                            </div>
-
-                                            <div className="relative h-6 flex items-center">
-                                                <input
-                                                    type="range"
-                                                    min="0.1"
-                                                    max="1.0"
-                                                    step="0.1"
-                                                    value={opacity}
-                                                    onChange={(e) => onOpacityChange(Number(e.target.value))}
-                                                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all"
-                                                />
+                                            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">Hex Opacity</label>
+                                            <div className="flex bg-slate-800/50 rounded-lg p-1 border border-white/5">
+                                                {opacityLevels.map((level) => (
+                                                    <button
+                                                        key={level.label}
+                                                        type="button"
+                                                        onClick={() => onOpacityChange(level.value)}
+                                                        className={cn(
+                                                            "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                                                            opacity === level.value
+                                                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
+                                                                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                                        )}
+                                                    >
+                                                        {level.label}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
 
-                            <button
-                                type="submit"
-                                disabled={isLoading || zip.length < 5}
-                                className={cn(
-                                    "w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 overflow-hidden relative",
-                                    isLoading || zip.length < 5
-                                        ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5"
-                                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-900/40 border border-emerald-500/20 group"
-                                )}
-                            >
-                                {isLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <span className="relative z-10">Generate Hexes</span>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                    </>
-                                )}
-                            </button>
+                            {mode !== 'draw' && (
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || !isInputValid}
+                                    className={cn(
+                                        "w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 overflow-hidden relative",
+                                        isLoading || !isInputValid
+                                            ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5"
+                                            : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-900/40 border border-emerald-500/20 group"
+                                    )}
+                                >
+                                    {isLoading ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <span className="relative z-10">Generate Hexes</span>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </form>
 
                         <AnimatePresence>
@@ -229,7 +325,6 @@ export function ControlPanel({ onSearch, isLoading, error, stats, opacity, onOpa
                                         onClick={() => {
                                             if (stats.hexes) {
                                                 navigator.clipboard.writeText(JSON.stringify(stats.hexes));
-                                                // Optional: Show toast or feedback
                                             }
                                         }}
                                         className="w-full py-2 bg-slate-700/50 hover:bg-slate-700 text-xs font-medium text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-2"
