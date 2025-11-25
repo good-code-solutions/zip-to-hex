@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, Hexagon, Map, Settings2, MapPin, PenTool, Hash } from 'lucide-react';
+import { Search, Loader2, Hexagon, Map, Settings2, MapPin, PenTool, Hash, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 
@@ -7,6 +7,7 @@ interface ControlPanelProps {
     onSearch: (query: string, resolution: number, type: 'zip' | 'address') => void;
     onDrawMode: () => void;
     onReset: (targetMode?: 'zip' | 'address' | 'draw') => void;
+    onModeChange: (targetMode: 'zip' | 'address' | 'draw') => void;
     isLoading: boolean;
     error: string | null;
     stats: {
@@ -19,6 +20,8 @@ interface ControlPanelProps {
     addressQuery: string;
     initialResolution: number;
     initialMode: 'zip' | 'address' | 'draw';
+    fillGaps: boolean;
+    onFillGapsChange: (fill: boolean) => void;
 }
 
 type SearchMode = 'zip' | 'address' | 'draw';
@@ -27,6 +30,7 @@ export function ControlPanel({
     onSearch,
     onDrawMode,
     onReset,
+    onModeChange,
     isLoading,
     error,
     stats,
@@ -35,7 +39,9 @@ export function ControlPanel({
     zipQuery,
     addressQuery,
     initialResolution,
-    initialMode
+    initialMode,
+    fillGaps,
+    onFillGapsChange
 }: ControlPanelProps) {
     const [zipInput, setZipInput] = useState(zipQuery);
     const [addressInput, setAddressInput] = useState(addressQuery);
@@ -43,6 +49,7 @@ export function ControlPanel({
     const [isSettingsOpen, setIsSettingsOpen] = useState(true);
     const [isMobileOpen, setIsMobileOpen] = useState(true);
     const [mode, setMode] = useState<SearchMode>(initialMode);
+    const [isCopied, setIsCopied] = useState(false);
 
     // Update state if props change (e.g. from localStorage load)
     useEffect(() => {
@@ -76,13 +83,6 @@ export function ControlPanel({
             if (window.innerWidth < 768) setIsMobileOpen(false);
         }
     };
-
-    const opacityLevels = [
-        { label: 'None', value: 0 },
-        { label: 'Low', value: 0.2 },
-        { label: 'Med', value: 0.5 },
-        { label: 'High', value: 0.8 },
-    ];
 
     const currentInput = mode === 'zip' ? zipInput : addressInput;
     const isInputValid = currentInput.length >= 3;
@@ -150,7 +150,7 @@ export function ControlPanel({
                                     setMode('zip');
                                     if (wasDrawMode) {
                                         // Clear draw mode state when switching from draw
-                                        onReset('zip');
+                                        onModeChange('zip');
                                     }
                                 }}
                                 className={cn(
@@ -166,7 +166,7 @@ export function ControlPanel({
                                     setMode('address');
                                     if (wasDrawMode) {
                                         // Clear draw mode state when switching from draw
-                                        onReset('address');
+                                        onModeChange('address');
                                     }
                                 }}
                                 className={cn(
@@ -218,7 +218,7 @@ export function ControlPanel({
                                         exit={{ height: 0, opacity: 0 }}
                                         className="overflow-hidden"
                                     >
-                                        <div className="pt-1 pb-2 space-y-3">
+                                        <div className="pt-1 pb-1 space-y-2">
                                             <div className="flex justify-between items-end">
                                                 <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">H3 Resolution</label>
                                                 <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
@@ -226,7 +226,7 @@ export function ControlPanel({
                                                 </span>
                                             </div>
 
-                                            <div className="relative pt-6 pb-2">
+                                            <div className="relative pt-4 pb-2">
                                                 <input
                                                     type="range"
                                                     min="5"
@@ -246,24 +246,44 @@ export function ControlPanel({
                                             </div>
                                         </div>
 
-                                        <div className="pt-1 pb-2 space-y-3 border-t border-white/5">
-                                            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">Hex Opacity</label>
-                                            <div className="flex bg-slate-800/50 rounded-lg p-1 border border-white/5">
-                                                {opacityLevels.map((level) => (
+                                        <div className="pt-2 pb-1 space-y-2 border-t border-white/5">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-end gap-2">
+                                                    <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider ml-1">Hex Opacity</label>
+                                                    <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+                                                        {Math.round(opacity * 100)}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider cursor-pointer" onClick={() => onFillGapsChange(!fillGaps)}>Fill Gaps</label>
                                                     <button
-                                                        key={level.label}
                                                         type="button"
-                                                        onClick={() => onOpacityChange(level.value)}
+                                                        onClick={() => onFillGapsChange(!fillGaps)}
                                                         className={cn(
-                                                            "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
-                                                            opacity === level.value
-                                                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/20"
-                                                                : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                                                            "relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2 focus:ring-offset-slate-900",
+                                                            fillGaps ? "bg-emerald-500" : "bg-slate-700"
                                                         )}
                                                     >
-                                                        {level.label}
+                                                        <span
+                                                            className={cn(
+                                                                "inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform",
+                                                                fillGaps ? "translate-x-3.5" : "translate-x-1"
+                                                            )}
+                                                            style={{ transform: fillGaps ? 'translateX(14px)' : 'translateX(4px)' }}
+                                                        />
                                                     </button>
-                                                ))}
+                                                </div>
+                                            </div>
+                                            <div className="relative pt-2 pb-2">
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="1"
+                                                    step="0.05"
+                                                    value={opacity}
+                                                    onChange={(e) => onOpacityChange(Number(e.target.value))}
+                                                    className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400 transition-all relative z-10"
+                                                />
                                             </div>
                                         </div>
                                     </motion.div>
@@ -325,11 +345,14 @@ export function ControlPanel({
                                         onClick={() => {
                                             if (stats.hexes) {
                                                 navigator.clipboard.writeText(JSON.stringify(stats.hexes));
+                                                setIsCopied(true);
+                                                setTimeout(() => setIsCopied(false), 2000);
                                             }
                                         }}
                                         className="w-full py-2 bg-slate-700/50 hover:bg-slate-700 text-xs font-medium text-slate-300 rounded-lg transition-colors flex items-center justify-center gap-2"
                                     >
-                                        <Settings2 className="w-3 h-3" /> Copy Hex JSON
+                                        {isCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Settings2 className="w-3 h-3" />}
+                                        {isCopied ? <span className="text-emerald-400">Copied!</span> : "Copy Hex JSON"}
                                     </button>
                                 </motion.div>
                             )}

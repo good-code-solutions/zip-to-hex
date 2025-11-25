@@ -11,10 +11,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [zipBoundary, setZipBoundary] = useState<GeoResponse | null>(null);
   const [hexes, setHexes] = useState<string[]>([]);
-  const [opacity, setOpacity] = useState(0.4);
+  const [opacity, setOpacity] = useState(0.5);
   const [zipQuery, setZipQuery] = useState('');
   const [addressQuery, setAddressQuery] = useState('');
   const [resolution, setResolution] = useState(8);
+  const [fillGaps, setFillGaps] = useState(true);
 
   const [showWelcome, setShowWelcome] = useState(false);
   const [isDrawMode, setIsDrawMode] = useState(false);
@@ -41,10 +42,10 @@ function App() {
   // Dynamic resolution update for drawing
   useEffect(() => {
     if (searchMode === 'draw' && drawnPolygon && resolution) {
-      const hexes = getHexesForLatLongLoop(drawnPolygon, resolution);
+      const hexes = getHexesForLatLongLoop(drawnPolygon, resolution, fillGaps);
       setHexes(hexes);
     }
-  }, [resolution, drawnPolygon, searchMode]);
+  }, [resolution, drawnPolygon, searchMode, fillGaps]);
 
   // Load state from localStorage on mount
   useEffect(() => {
@@ -52,17 +53,34 @@ function App() {
     if (saved) {
       try {
         const state = JSON.parse(saved);
-        if (state.zipBoundary) setZipBoundary(state.zipBoundary);
-        if (state.hexes) setHexes(state.hexes);
-        if (state.opacity) setOpacity(state.opacity);
+        console.log('Loading saved state:', state);
+
+        // Always restore these values if they exist
+        if (state.zipBoundary) {
+          console.log('Restoring zipBoundary');
+          setZipBoundary(state.zipBoundary);
+        }
+        if (state.hexes) {
+          console.log('Restoring hexes:', state.hexes.length, 'hexagons');
+          setHexes(state.hexes);
+        }
+        if (state.drawnPolygon) {
+          console.log('Restoring drawnPolygon');
+          setDrawnPolygon(state.drawnPolygon);
+        }
+
+        // Restore preferences
+        if (state.opacity !== undefined) setOpacity(state.opacity);
         if (state.zipQuery) setZipQuery(state.zipQuery);
         if (state.addressQuery) setAddressQuery(state.addressQuery);
         if (state.resolution) setResolution(state.resolution);
+        if (state.fillGaps !== undefined) setFillGaps(state.fillGaps);
         if (state.searchMode) setSearchMode(state.searchMode);
-        if (state.drawnPolygon) setDrawnPolygon(state.drawnPolygon);
       } catch (e) {
         console.error("Failed to load saved state", e);
       }
+    } else {
+      console.log('No saved state found');
     }
 
     // Check for welcome message
@@ -83,11 +101,12 @@ function App() {
       zipQuery,
       addressQuery,
       resolution,
+      fillGaps,
       searchMode,
       drawnPolygon
     };
     localStorage.setItem('zip2h3_state', JSON.stringify(state));
-  }, [zipBoundary, hexes, opacity, zipQuery, addressQuery, resolution, searchMode, drawnPolygon]);
+  }, [zipBoundary, hexes, opacity, zipQuery, addressQuery, resolution, fillGaps, searchMode, drawnPolygon]);
 
   const handleSearch = async (query: string, res: number, type: 'zip' | 'address') => {
     setIsLoading(true);
@@ -126,9 +145,9 @@ function App() {
       let generatedHexes: string[] = [];
 
       if (geometry.type === 'Polygon') {
-        generatedHexes = getHexesForPolygon(geometry.coordinates as number[][][], res);
+        generatedHexes = getHexesForPolygon(geometry.coordinates as number[][][], res, fillGaps);
       } else if (geometry.type === 'MultiPolygon') {
-        generatedHexes = getHexesForMultiPolygon(geometry.coordinates as number[][][][], res);
+        generatedHexes = getHexesForMultiPolygon(geometry.coordinates as number[][][][], res, fillGaps);
       } else if (geometry.type === 'Point') {
         const [lng, lat] = geometry.coordinates as number[];
         // For address search, we only want Res 10
@@ -150,17 +169,38 @@ function App() {
     }
   };
 
-  const handleDrawComplete = (hexes: string[], polygon?: number[][]) => {
-    setHexes(hexes);
-    if (polygon) {
-      setDrawnPolygon(polygon);
-      setSearchMode('draw');
-    } else {
-      // If no polygon (clearing), clear everything
-      setDrawnPolygon(null);
+  const handleDrawComplete = (newHexes: string[], polygon?: number[][]) => {
+    if (newHexes.length === 0) {
+      // Clear everything
+      setHexes([]);
       setZipBoundary(null);
+      setDrawnPolygon(null);
+      setError(null);
+      localStorage.removeItem('zip2h3_state');
+    } else {
+      setHexes(newHexes);
+      if (polygon) {
+        setDrawnPolygon(polygon);
+        setSearchMode('draw');
+      } else {
+        // This case should ideally not happen if newHexes.length > 0
+        // but no polygon was provided. For safety, clear polygon.
+        setDrawnPolygon(null);
+      }
     }
     setShowWelcome(false);
+  };
+
+  const handleModeChange = (targetMode: 'zip' | 'address' | 'draw') => {
+    // Don't clear hexes or boundaries when switching modes
+    // Only clear queries for the mode we're leaving
+    if (targetMode !== 'zip') setZipQuery('');
+    if (targetMode !== 'address') setAddressQuery('');
+    if (targetMode !== 'draw') setDrawnPolygon(null);
+
+    setSearchMode(targetMode);
+    setIsDrawMode(targetMode === 'draw');
+    setError(null);
   };
 
   const handleReset = (targetMode: 'zip' | 'address' | 'draw' = 'zip') => {
@@ -200,6 +240,7 @@ function App() {
           setSearchMode('draw');
         }}
         onReset={handleReset}
+        onModeChange={handleModeChange}
         isLoading={isLoading}
         error={error}
         stats={hexes.length > 0 ? { hexCount: hexes.length, hexes } : null}
@@ -209,6 +250,8 @@ function App() {
         addressQuery={addressQuery}
         initialResolution={resolution}
         initialMode={searchMode}
+        fillGaps={fillGaps}
+        onFillGapsChange={setFillGaps}
       />
       <ContactModal
         isOpen={isContactOpen}

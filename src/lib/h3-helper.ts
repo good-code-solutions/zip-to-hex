@@ -5,7 +5,46 @@ import * as h3 from "h3-js";
 // If isGeoJson is true, it expects [lng, lat] (GeoJSON standard).
 // So we can pass GeoJSON coordinates directly if we set the flag.
 
-export function getHexesForPolygon(coordinates: number[][][], resolution: number): string[] {
+// Helper to fill gaps with higher resolution hexes (optimized with compactCells)
+function fillPolygonWithGaps(coordinates: number[][], resolution: number, isGeoJson: boolean): string[] {
+    try {
+        // 1. Generate hexes at the finest resolution (base + 2)
+        // This gives us maximum detail at the edges
+        const fineRes = resolution + 2;
+        const fineHexes = h3.polygonToCells(coordinates, fineRes, isGeoJson);
+
+        // 2. Compact the hexes
+        // This merges the fine hexes into larger ones where they fill a complete parent
+        const compactedHexes = h3.compactCells(fineHexes);
+
+        // 3. Filter and Uncompact
+        // We want to keep the optimization (larger hexes), but we don't want hexes
+        // larger than our requested base 'resolution'.
+        const finalHexes: string[] = [];
+
+        for (const hex of compactedHexes) {
+            const hexRes = h3.getResolution(hex);
+
+            if (hexRes < resolution) {
+                // If the compacted hex is larger than our target base resolution,
+                // uncompact it down to the target resolution.
+                // This ensures we don't show huge hexes when the user asked for a specific granularity.
+                const children = h3.cellToChildren(hex, resolution);
+                finalHexes.push(...children);
+            } else {
+                // If it's at target resolution or smaller (higher res), keep it.
+                finalHexes.push(hex);
+            }
+        }
+
+        return finalHexes;
+    } catch (e) {
+        console.error("Error in multi-res fill:", e);
+        return [];
+    }
+}
+
+export function getHexesForPolygon(coordinates: number[][][], resolution: number, useMultiRes: boolean = true): string[] {
     // Handle Polygon (single ring or with holes)
     // coordinates[0] is the outer ring
     // h3.polygonToCells takes the loop directly if it's a simple polygon, 
@@ -23,7 +62,12 @@ export function getHexesForPolygon(coordinates: number[][][], resolution: number
 
     try {
         // isGeoJson = true means input is [lng, lat]
-        const hexes = h3.polygonToCells(outerRing, resolution, true);
+        let hexes: string[];
+        if (useMultiRes) {
+            hexes = fillPolygonWithGaps(outerRing, resolution, true);
+        } else {
+            hexes = h3.polygonToCells(outerRing, resolution, true);
+        }
 
         // Fallback: If no hexes are generated (polygon too small for resolution),
         // find the centroid and return that hex.
@@ -49,11 +93,11 @@ export function getHexesForPolygon(coordinates: number[][][], resolution: number
     }
 }
 
-export function getHexesForMultiPolygon(coordinates: number[][][][], resolution: number): string[] {
+export function getHexesForMultiPolygon(coordinates: number[][][][], resolution: number, useMultiRes: boolean = true): string[] {
     const allHexes = new Set<string>();
 
     for (const polygon of coordinates) {
-        const hexes = getHexesForPolygon(polygon, resolution);
+        const hexes = getHexesForPolygon(polygon, resolution, useMultiRes);
         hexes.forEach(h => allHexes.add(h));
     }
 
@@ -106,11 +150,17 @@ export function getHexForPoint(lat: number, lng: number, resolution: number, sin
     }
 }
 
-export function getHexesForLatLongLoop(loop: number[][], resolution: number): string[] {
+export function getHexesForLatLongLoop(loop: number[][], resolution: number, useMultiRes: boolean = true): string[] {
     try {
         // loop is [lat, lng][]
         // h3.polygonToCells(loop, res, isGeoJson=false) expects [lat, lng]
-        const hexes = h3.polygonToCells(loop, resolution);
+
+        let hexes: string[];
+        if (useMultiRes) {
+            hexes = fillPolygonWithGaps(loop, resolution, false);
+        } else {
+            hexes = h3.polygonToCells(loop, resolution);
+        }
         return hexes;
     } catch (e) {
         console.error("Error generating hexes from loop:", e);

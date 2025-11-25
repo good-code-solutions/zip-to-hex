@@ -249,9 +249,6 @@ export function MapContainer({ zipBoundary, hexes, opacity, isDrawMode = false, 
                 zoom={4}
                 className="h-full w-full outline-none"
                 zoomControl={false}
-                zoomAnimation={true}
-                zoomAnimationThreshold={4}
-                fadeAnimation={true}
             >
                 <MapRefSetter mapRef={mapRef} />
                 <TileLayer
