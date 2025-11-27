@@ -29,7 +29,7 @@ type SearchMode = 'zip' | 'address' | 'draw';
 export function ControlPanel({
     onSearch,
     onDrawMode,
-    onReset,
+    onReset: _onReset,
     onModeChange,
     isLoading,
     error,
